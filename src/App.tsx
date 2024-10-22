@@ -1,46 +1,81 @@
+// App.tsx
 import { useState, useEffect } from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
 
+// Define the BeforeInstallPromptEvent type since it's not in standard TypeScript definitions
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+  }
+}
+
 function App() {
   const [count, setCount] = useState<number>(0);
-  const [deferredPrompt, setDeferredPrompt] = useState<any | null>(null);
-  const [isInstallable, setIsInstallable] = useState<boolean>(true);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
 
   useEffect(() => {
-    // TODO find appropriate event type 
-    // BeforeInstallPromptEvent valid but experimental
-    const handleBeforeInstallPrompt = (event: any) => {
-      event.preventDefault(); // Prevent the mini-info bar from appearing on mobile
-      setDeferredPrompt(event); // Stash the event so it can be triggered later
-      setIsInstallable(true); // Update state to show install button
+    // Listen for the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      setDeferredPrompt(e);
+      // Show the install button
+      setIsInstallable(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
+    // Listen for successful installation
+    const handleAppInstalled = () => {
+      // Clear the deferredPrompt
+      setDeferredPrompt(null);
+      // Hide the install button
+      setIsInstallable(false);
+      console.log('PWA was installed');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt(); // Show the install prompt
-      const { outcome } = await deferredPrompt.userChoice; // Wait for the user to respond
-      console.log(`User response to the install prompt: ${outcome}`);
-      setDeferredPrompt(null); // Clear the prompt since it can only be used once
-      setIsInstallable(false); // Hide the install button after prompting
-    }
+  const handleInstallClick = async (): Promise<void> => {
+    if (!deferredPrompt) return;
+
+    // Show the install prompt
+    await deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    // Clear the deferredPrompt variable
+    setDeferredPrompt(null);
+    
+    console.log(`User response to the install prompt: ${outcome}`);
   };
 
   return (
     <>
       <div>
-        <a href="https://vitejs.dev" target="_blank" rel="noopener noreferrer">
+        <a href="https://vitejs.dev" target="_blank">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
-        <a href="https://react.dev" target="_blank" rel="noopener noreferrer">
+        <a href="https://react.dev" target="_blank">
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
@@ -49,14 +84,17 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
         {isInstallable && (
-          <button onClick={handleInstallClick}>
+          <button 
+            onClick={handleInstallClick}
+            className="install-button"
+          >
             Install App
           </button>
         )}
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
       </div>
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
