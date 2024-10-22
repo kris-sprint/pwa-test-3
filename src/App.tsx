@@ -24,8 +24,30 @@ function App() {
   const [isInstallable, setIsInstallable] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
   const [isIOSChrome, setIsIOSChrome] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
 
   useEffect(() => {
+    // Check if app is in standalone mode
+    const checkStandalone = () => {
+      const isStandaloneMode = 
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone ||  // iOS Safari
+        window.location.href.includes('homescreen=1'); // Extra check for some browsers
+        
+      setIsStandalone(isStandaloneMode);
+    };
+
+    // Initial check
+    checkStandalone();
+
+    // Listen for changes in display mode
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsStandalone(e.matches);
+    };
+    
+    mediaQuery.addListener(handleChange);
+
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isIOSChromeDevice = /CriOS/.test(navigator.userAgent);
@@ -44,12 +66,14 @@ function App() {
       const handleAppInstalled = () => {
         setDeferredPrompt(null);
         setIsInstallable(false);
+        setIsStandalone(true);
       };
 
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.addEventListener('appinstalled', handleAppInstalled);
 
       return () => {
+        mediaQuery.removeListener(handleChange);
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.removeEventListener('appinstalled', handleAppInstalled);
       };
@@ -70,6 +94,11 @@ function App() {
   };
 
   const renderInstallButton = () => {
+    // Don't show any install options if already in standalone mode
+    if (isStandalone) {
+      return null;
+    }
+
     if (isIOSChrome) {
       return (
         <div className="ios-instructions">
