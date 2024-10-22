@@ -34,13 +34,15 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\.(?:js|css|html|png|jpg|jpeg|svg|gif)$/,
-            handler: "CacheFirst",
+            // handler: "CacheFirst",
+            handler: "NetworkFirst",
             options: {
               cacheName: "assets-cache",
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
               },
+              networkTimeoutSeconds: 5,
             },
           },
         ],
