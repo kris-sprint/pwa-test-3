@@ -11,8 +11,8 @@ export default defineConfig({
         name: "My PWA",
         short_name: "MyPWA",
         description: "A simple Progressive Web App using Vite and React",
-        theme_color: "#ffffff",
-        background_color: "#ffffff",
+        theme_color: "#000",
+        background_color: "#000",
         display: "standalone",
         orientation: "portrait",
         icons: [
