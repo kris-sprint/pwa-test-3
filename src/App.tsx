@@ -6,7 +6,7 @@ import './App.css';
 function App() {
   const [count, setCount] = useState<number>(0);
   const [deferredPrompt, setDeferredPrompt] = useState<any | null>(null);
-  const [isInstallable, setIsInstallable] = useState<boolean>(false);
+  const [isInstallable, setIsInstallable] = useState<boolean>(true);
 
   useEffect(() => {
     // TODO find appropriate event type 
