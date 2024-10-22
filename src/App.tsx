@@ -4,21 +4,23 @@ import viteLogo from '/vite.svg';
 import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [count, setCount] = useState<number>(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<any | null>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
 
   useEffect(() => {
+    // TODO find appropriate event type 
+    // BeforeInstallPromptEvent valid but experimental
     const handleBeforeInstallPrompt = (event: any) => {
       event.preventDefault(); // Prevent the mini-info bar from appearing on mobile
       setDeferredPrompt(event); // Stash the event so it can be triggered later
       setIsInstallable(true); // Update state to show install button
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
     };
   }, []);
 
@@ -35,10 +37,10 @@ function App() {
   return (
     <>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
+        <a href="https://vitejs.dev" target="_blank" rel="noopener noreferrer">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
-        <a href="https://react.dev" target="_blank">
+        <a href="https://react.dev" target="_blank" rel="noopener noreferrer">
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
