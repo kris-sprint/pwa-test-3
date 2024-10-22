@@ -1,10 +1,8 @@
-// App.tsx
 import { useState, useEffect } from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
 
-// Define the BeforeInstallPromptEvent type since it's not in standard TypeScript definitions
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
   readonly userChoice: Promise<{
@@ -24,49 +22,86 @@ function App() {
   const [count, setCount] = useState<number>(0);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState<boolean>(false);
+  const [isIOS, setIsIOS] = useState<boolean>(false);
+  const [isIOSChrome, setIsIOSChrome] = useState<boolean>(false);
 
   useEffect(() => {
-    // Listen for the beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Stash the event so it can be triggered later
-      setDeferredPrompt(e);
-      // Show the install button
-      setIsInstallable(true);
-    };
+    // Detect iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIOSChromeDevice = /CriOS/.test(navigator.userAgent);
+    
+    setIsIOS(isIOSDevice);
+    setIsIOSChrome(isIOSChromeDevice);
 
-    // Listen for successful installation
-    const handleAppInstalled = () => {
-      // Clear the deferredPrompt
-      setDeferredPrompt(null);
-      // Hide the install button
-      setIsInstallable(false);
-      console.log('PWA was installed');
-    };
+    // Only add beforeinstallprompt listener if not on iOS
+    if (!isIOSDevice) {
+      const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setIsInstallable(true);
+      };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+      const handleAppInstalled = () => {
+        setDeferredPrompt(null);
+        setIsInstallable(false);
+      };
 
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    }
   }, []);
 
   const handleInstallClick = async (): Promise<void> => {
     if (!deferredPrompt) return;
 
-    // Show the install prompt
-    await deferredPrompt.prompt();
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.error('Error during installation:', err);
+    }
+  };
 
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    // Clear the deferredPrompt variable
-    setDeferredPrompt(null);
-    
-    console.log(`User response to the install prompt: ${outcome}`);
+  const renderInstallButton = () => {
+    if (isIOSChrome) {
+      return (
+        <div className="ios-instructions">
+          <p>To install this app on iOS Chrome:</p>
+          <ol>
+            <li>Open this page in Safari</li>
+            <li>Follow the Safari instructions below</li>
+          </ol>
+        </div>
+      );
+    } else if (isIOS) {
+      return (
+        <div className="ios-instructions">
+          <p>To install this app on your iPhone:</p>
+          <ol>
+            <li>Tap the Share button in Safari <span className="ios-icon">􀈂</span></li>
+            <li>Scroll down and tap "Add to Home Screen" <span className="ios-icon">􀏦</span></li>
+            <li>Tap "Add" in the top right</li>
+          </ol>
+        </div>
+      );
+    } else if (isInstallable) {
+      return (
+        <button 
+          onClick={handleInstallClick}
+          className="install-button"
+        >
+          Install App
+        </button>
+      );
+    }
+    return null;
   };
 
   return (
@@ -84,14 +119,7 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
-        {isInstallable && (
-          <button 
-            onClick={handleInstallClick}
-            className="install-button"
-          >
-            Install App
-          </button>
-        )}
+        {renderInstallButton()}
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
